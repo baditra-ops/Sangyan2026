@@ -3,7 +3,7 @@ import { Wifi, WifiOff, Server, Radio, Database, RefreshCw } from 'lucide-react'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-export default function SystemStatus({ wsStatus, onReconnect }) {
+export default function SystemStatus({ wsStatus, onReconnect, language = 'en' }) {
   const [backendHealth, setBackendHealth] = useState(null);
   const [isChecking, setIsChecking] = useState(false);
 
@@ -38,7 +38,7 @@ export default function SystemStatus({ wsStatus, onReconnect }) {
     <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4 shadow-sm backdrop-blur-sm">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         {/* Status Pills */}
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
           {/* Backend HTTP Status */}
           <div className="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700/60 text-xs">
             <Server className={`w-3.5 h-3.5 ${isBackendOnline ? 'text-emerald-400' : 'text-rose-400'}`} />
@@ -77,22 +77,25 @@ export default function SystemStatus({ wsStatus, onReconnect }) {
           {/* Synthetic Data Badge */}
           <div className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-indigo-950/30 border border-indigo-800/40 text-xs">
             <Radio className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
-            <span className="text-indigo-300 font-medium">Live Stream: Synthetic</span>
+            <span className="text-indigo-300 font-medium">
+              {language === 'hi' ? 'लाइव स्ट्रीम: सिंथेटिक' : 'Live Stream: Synthetic'}
+            </span>
           </div>
         </div>
 
         {/* Manual Refresh / Reconnect */}
         <button
+          type="button"
           onClick={() => {
             checkHealth();
             if (onReconnect) onReconnect();
           }}
           disabled={isChecking}
-          className="inline-flex items-center justify-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition border border-slate-700 disabled:opacity-50"
+          className="inline-flex items-center justify-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-medium transition border border-slate-700 disabled:opacity-50 min-h-[38px]"
           title="Refresh health checks and reconnect WebSocket"
         >
           <RefreshCw className={`w-3 h-3 ${isChecking ? 'animate-spin' : ''}`} />
-          <span>Sync Status</span>
+          <span>{language === 'hi' ? 'सिंक स्थिति' : 'Sync Status'}</span>
         </button>
       </div>
     </div>

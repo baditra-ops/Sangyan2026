@@ -3,7 +3,7 @@ import { Play, Zap, Flame, Clock, ShieldAlert, Check, Loader2, Sparkles, RotateC
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-export default function EventSimulator({ selectedInvestor, onEventSent, onReset }) {
+export default function EventSimulator({ selectedInvestor, onEventSent, onReset, language = 'en' }) {
   const [amount, setAmount] = useState('2500');
   const [outcome, setOutcome] = useState('LOSS');
   const [isOddHour, setIsOddHour] = useState(false);
@@ -61,7 +61,7 @@ export default function EventSimulator({ selectedInvestor, onEventSent, onReset 
     });
   };
 
-  // Demo Preset 1: Normal Activity
+  // Demo Preset 1: PACED
   const runNormalDemo = async () => {
     await sendEvent({
       investorId: selectedInvestor,
@@ -72,7 +72,7 @@ export default function EventSimulator({ selectedInvestor, onEventSent, onReset 
     });
   };
 
-  // Demo Preset 2: Rapid Decisions (3 rapid events in sequence)
+  // Demo Preset 2: RAPID DECISIONS
   const runRapidDemo = async () => {
     setIsSubmitting(true);
     setStatusMessage({ type: 'info', text: 'Executing 3 rapid simulated decisions...' });
@@ -89,7 +89,7 @@ export default function EventSimulator({ selectedInvestor, onEventSent, onReset 
     setIsSubmitting(false);
   };
 
-  // Demo Preset 3: Loss Chasing (1000 -> 2500 -> 5000 consecutive losses)
+  // Demo Preset 3: LOSS CHASING
   const runLossChasingDemo = async () => {
     setIsSubmitting(true);
     setStatusMessage({ type: 'info', text: 'Simulating loss escalation sequence (₹1,000 -> ₹2,500 -> ₹5,000)...' });
@@ -107,7 +107,7 @@ export default function EventSimulator({ selectedInvestor, onEventSent, onReset 
     setIsSubmitting(false);
   };
 
-  // Demo Preset 4: Odd Hour Activity (02:30 AM IST)
+  // Demo Preset 4: ODD HOURS
   const runOddHourDemo = async () => {
     await sendEvent({
       investorId: selectedInvestor,
@@ -144,16 +144,23 @@ export default function EventSimulator({ selectedInvestor, onEventSent, onReset 
   };
 
   return (
-    <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 shadow-sm backdrop-blur-sm space-y-5">
+    <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 shadow-sm backdrop-blur-sm space-y-4">
       <div>
-        <div className="flex items-center space-x-2">
-          <Sparkles className="w-4 h-4 text-indigo-400" />
-          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-            SYNTHETIC EVENT SIMULATOR
-          </h3>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Sparkles className="w-4 h-4 text-indigo-400" />
+            <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+              {language === 'hi' ? 'कृत्रिम घटना सिमुलेटर' : 'SYNTHETIC EVENT SIMULATOR'}
+            </h3>
+          </div>
+          <span className="px-2 py-0.5 rounded text-[9px] font-extrabold tracking-wider uppercase bg-amber-500/10 text-amber-300 border border-amber-500/20 font-mono">
+            SIMULATED DATA
+          </span>
         </div>
         <p className="text-[11px] text-slate-500 mt-0.5">
-          Simulate retail investor decision events to feed the real-time Redis Stream pipeline.
+          {language === 'hi'
+            ? 'रीयल-टाइम रेडिस स्ट्रीम पाइपलाइन का परीक्षण करने के लिए सिंथेटिक निर्णय भेजें।'
+            : 'Simulate retail investor decision events to feed the real-time Redis Stream pipeline.'}
         </p>
       </div>
 
@@ -161,20 +168,22 @@ export default function EventSimulator({ selectedInvestor, onEventSent, onReset 
       <div>
         <div className="flex items-center justify-between mb-2">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-            One-Click Demo Scenarios
+            {language === 'hi' ? 'एक-क्लिक डेमो परिदृश्य' : 'One-Click Demo Presets'}
           </span>
           <button
             type="button"
             onClick={handleResetDemo}
             disabled={isSubmitting}
-            className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[11px] font-medium border border-slate-700 transition disabled:opacity-50"
+            className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[11px] font-medium border border-slate-700 transition disabled:opacity-50"
             title="Reset this simulated investor back to clean state"
           >
             <RotateCcw className="w-3 h-3 text-indigo-400" />
-            <span>Reset Demo</span>
+            <span>{language === 'hi' ? 'रीसेट डेमो' : 'Reset Demo'}</span>
           </button>
         </div>
+
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {/* Preset 1: PACED */}
           <button
             type="button"
             onClick={runNormalDemo}
@@ -183,11 +192,14 @@ export default function EventSimulator({ selectedInvestor, onEventSent, onReset 
           >
             <div className="flex items-center space-x-1.5 text-emerald-400 mb-1">
               <Check className="w-3.5 h-3.5" />
-              <span className="text-xs font-bold">Paced Trade</span>
+              <span className="text-xs font-bold font-mono">PACED</span>
             </div>
-            <span className="text-[10px] text-slate-400">Normal WIN (Low Risk)</span>
+            <span className="text-[10px] text-slate-400 leading-tight">
+              {language === 'hi' ? 'सामान्य सिम्युलेटेड गतिविधि' : 'Normal simulated activity'}
+            </span>
           </button>
 
+          {/* Preset 2: RAPID DECISIONS */}
           <button
             type="button"
             onClick={runRapidDemo}
@@ -196,11 +208,14 @@ export default function EventSimulator({ selectedInvestor, onEventSent, onReset 
           >
             <div className="flex items-center space-x-1.5 text-amber-400 mb-1">
               <Zap className="w-3.5 h-3.5" />
-              <span className="text-xs font-bold">Rapid Pacing</span>
+              <span className="text-xs font-bold font-mono">RAPID DECISIONS</span>
             </div>
-            <span className="text-[10px] text-slate-400">3 decisions in 1 sec</span>
+            <span className="text-[10px] text-slate-400 leading-tight">
+              {language === 'hi' ? 'कम अंतराल में दोहराए गए निर्णय' : 'Demonstrates repeated decisions in a short interval'}
+            </span>
           </button>
 
+          {/* Preset 3: LOSS CHASING */}
           <button
             type="button"
             onClick={runLossChasingDemo}
@@ -209,11 +224,14 @@ export default function EventSimulator({ selectedInvestor, onEventSent, onReset 
           >
             <div className="flex items-center space-x-1.5 text-rose-400 mb-1">
               <Flame className="w-3.5 h-3.5" />
-              <span className="text-xs font-bold">Loss Chasing</span>
+              <span className="text-xs font-bold font-mono">LOSS CHASING</span>
             </div>
-            <span className="text-[10px] text-slate-400">Escalating losses (₹1k-5k)</span>
+            <span className="text-[10px] text-slate-400 leading-tight">
+              {language === 'hi' ? 'लगातार नुकसान + बढ़ती राशि' : 'Demonstrates consecutive losses + increasing amount behaviour'}
+            </span>
           </button>
 
+          {/* Preset 4: ODD HOURS */}
           <button
             type="button"
             onClick={runOddHourDemo}
@@ -222,9 +240,11 @@ export default function EventSimulator({ selectedInvestor, onEventSent, onReset 
           >
             <div className="flex items-center space-x-1.5 text-indigo-400 mb-1">
               <Clock className="w-3.5 h-3.5" />
-              <span className="text-xs font-bold">Odd Hours</span>
+              <span className="text-xs font-bold font-mono">ODD HOURS</span>
             </div>
-            <span className="text-[10px] text-slate-400">02:30 AM IST decision</span>
+            <span className="text-[10px] text-slate-400 leading-tight">
+              {language === 'hi' ? 'देर रात गतिविधि का पता लगाना' : 'Demonstrates late-night activity detection'}
+            </span>
           </button>
         </div>
       </div>
@@ -235,7 +255,7 @@ export default function EventSimulator({ selectedInvestor, onEventSent, onReset 
           {/* Amount input */}
           <div>
             <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">
-              Simulated Amount (₹)
+              {language === 'hi' ? 'सिम्युलेटेड राशि (₹)' : 'Simulated Amount (₹)'}
             </label>
             <input
               type="number"
@@ -252,7 +272,7 @@ export default function EventSimulator({ selectedInvestor, onEventSent, onReset 
           {/* Simulated Outcome */}
           <div>
             <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">
-              Simulated Outcome
+              {language === 'hi' ? 'सिम्युलेटेड परिणाम' : 'Simulated Outcome'}
             </label>
             <select
               value={outcome}
@@ -274,7 +294,9 @@ export default function EventSimulator({ selectedInvestor, onEventSent, onReset 
                 onChange={(e) => setIsOddHour(e.target.checked)}
                 className="rounded border-slate-700 text-indigo-600 focus:ring-0"
               />
-              <span className="text-[11px]">Simulate Odd-Hour (02:30 IST)</span>
+              <span className="text-[11px]">
+                {language === 'hi' ? 'देर रात (02:30 IST) सिमुलेट करें' : 'Simulate Odd-Hour (02:30 IST)'}
+              </span>
             </label>
           </div>
         </div>
@@ -282,7 +304,7 @@ export default function EventSimulator({ selectedInvestor, onEventSent, onReset 
         {/* Submit button */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
           <span className="text-[10px] text-slate-500 italic">
-            Targeting: <strong className="text-slate-300 font-mono">{selectedInvestor}</strong> (No real capital is transferred)
+            Targeting: <strong className="text-slate-300 font-mono">{selectedInvestor}</strong> (Synthetic simulation only)
           </span>
 
           <button
@@ -298,7 +320,7 @@ export default function EventSimulator({ selectedInvestor, onEventSent, onReset 
             ) : (
               <>
                 <Play className="w-3.5 h-3.5 fill-current" />
-                <span>Simulate Decision</span>
+                <span>{language === 'hi' ? 'निर्णय सिमुलेट करें' : 'Simulate Decision'}</span>
               </>
             )}
           </button>
