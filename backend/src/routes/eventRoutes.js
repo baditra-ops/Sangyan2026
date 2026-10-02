@@ -1,6 +1,8 @@
 const express = require('express');
 const crypto = require('crypto');
 const { addInvestorEvent } = require('../services/streamService');
+const { resetInvestorState } = require('../services/investorState');
+const { broadcastAssessment } = require('../services/websocketService');
 
 const router = express.Router();
 
@@ -83,7 +85,10 @@ router.post('/', async (req, res) => {
       ...(metadata ? { metadata } : {}),
     };
 
-    // 7. Append to Redis Stream
+    // 7. Log received synthetic event
+    console.log(`[EVENT] Received investor event: ${event.investorId} ${event.eventType}${event.amount ? ` (₹${event.amount})` : ''}${event.outcome ? ` [${event.outcome}]` : ''}`);
+
+    // 8. Append to Redis Stream
     const streamId = await addInvestorEvent(event);
 
     // 8. Return accepted response
@@ -109,6 +114,50 @@ router.post('/', async (req, res) => {
       message: 'Unable to record event to the stream at this time. Please retry.',
     });
   }
+});
+
+/**
+ * POST /events/reset
+ * DEMO ONLY: Resets in-memory behavioural state for a specific simulated investor.
+ */
+router.post('/reset', (req, res) => {
+  const { investorId } = req.body || {};
+  if (!investorId || typeof investorId !== 'string' || !investorId.trim()) {
+    return res.status(400).json({
+      success: false,
+      error: 'Validation Error',
+      message: 'investorId is required to reset demo state',
+    });
+  }
+
+  const id = investorId.trim();
+  resetInvestorState(id);
+
+  // Broadcast a clean/zero assessment to all clients watching this investor
+  const cleanAssessment = {
+    investorId: id,
+    eventId: null,
+    streamId: null,
+    riskScore: 0,
+    riskLevel: 'LOW',
+    signals: [],
+    coolingOff: false,
+    coolingOffReason: null,
+    reasons: [],
+    evaluatedAt: new Date().toISOString(),
+    isReset: true,
+    disclaimer: 'Prototype heuristics for behavioural resilience demonstration only. Not SEBI thresholds or financial advice.',
+  };
+  broadcastAssessment(cleanAssessment);
+
+  console.log(`[DEMO RESET] Reset behavioural state for investor: ${id}`);
+
+  return res.status(200).json({
+    success: true,
+    message: `Demo state reset successfully for ${id}`,
+    investorId: id,
+    cleanAssessment,
+  });
 });
 
 module.exports = router;

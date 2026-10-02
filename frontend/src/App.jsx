@@ -84,6 +84,7 @@ export default function App() {
             <EventSimulator
               selectedInvestor={selectedInvestor}
               onEventSent={handleEventSent}
+              onReset={() => setSimulatedEvents([])}
             />
 
             {/* Activity Timeline */}

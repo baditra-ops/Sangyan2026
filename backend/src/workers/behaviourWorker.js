@@ -95,6 +95,8 @@ const processEvent = async (event) => {
 
   // 4. Clear console output for hackathon demonstration
   console.log('----------------------------------------------------');
+  console.log(`[WORKER] Event processed: ${event.streamId || 'N/A'}`);
+  console.log(`[RISK] Assessment generated for ${assessment.investorId}: Score ${assessment.riskScore}/100 (${assessment.riskLevel}), Signals: ${assessment.signals.length}, Cooling-Off: ${assessment.coolingOff ? 'YES' : 'NO'}`);
   console.log(`[WORKER] Assessment for: ${assessment.investorId}`);
   console.log(`[WORKER] Stream ID: ${event.streamId || 'N/A'}`);
   console.log(`[WORKER] Event Type: ${event.eventType}${event.amount ? ` (₹${event.amount})` : ''}${event.outcome ? ` [Outcome: ${event.outcome}]` : ''}`);

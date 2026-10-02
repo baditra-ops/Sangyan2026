@@ -1,5 +1,4 @@
 const { WebSocketServer, WebSocket } = require('ws');
-const url = require('url');
 
 let wss = null;
 
@@ -16,6 +15,14 @@ const socketInvestorMap = new Map();
  * @param {string} investorId - The simulated investor ID to observe
  */
 const registerClient = (ws, investorId) => {
+  // If already registered to this investor, re-send ack without duplicate log
+  if (socketInvestorMap.get(ws) === investorId) {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'REGISTERED', investorId }));
+    }
+    return;
+  }
+
   // If client was previously registered to another investor, unregister first
   unregisterClient(ws, false);
 
@@ -83,8 +90,8 @@ const initWebSocketServer = (httpServer) => {
 
     // Support automatic registration via URL query param: ws://host:port/ws?investorId=investor-001
     try {
-      const parsedUrl = url.parse(req.url, true);
-      const queryInvestorId = parsedUrl.query && parsedUrl.query.investorId;
+      const parsedUrl = new URL(req.url, 'http://localhost');
+      const queryInvestorId = parsedUrl.searchParams.get('investorId');
       if (typeof queryInvestorId === 'string' && queryInvestorId.trim()) {
         registerClient(ws, queryInvestorId.trim());
       }
@@ -179,6 +186,8 @@ const broadcastAssessment = (assessment) => {
       disclaimer: assessment.disclaimer,
     },
   });
+
+  console.log(`[WS] Assessment sent to ${clients.size} client(s) for investor: ${investorId} (Score: ${assessment.riskScore})`);
 
   for (const client of clients) {
     if (client.readyState === WebSocket.OPEN) {

@@ -38,6 +38,7 @@ const addInvestorEvent = async (event) => {
 
   // Append entry to Redis Stream using XADD
   const streamId = await redisClient.xadd(INVESTOR_EVENTS_STREAM, '*', ...fields);
+  console.log(`[STREAM] Event added to ${INVESTOR_EVENTS_STREAM}, ID: ${streamId}`);
   return streamId;
 };
 

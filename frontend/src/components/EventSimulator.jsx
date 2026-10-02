@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { Play, Zap, Flame, Clock, ShieldAlert, Check, Loader2, Sparkles } from 'lucide-react';
+import { Play, Zap, Flame, Clock, ShieldAlert, Check, Loader2, Sparkles, RotateCcw } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-export default function EventSimulator({ selectedInvestor, onEventSent }) {
+export default function EventSimulator({ selectedInvestor, onEventSent, onReset }) {
   const [amount, setAmount] = useState('2500');
   const [outcome, setOutcome] = useState('LOSS');
   const [isOddHour, setIsOddHour] = useState(false);
@@ -118,6 +118,31 @@ export default function EventSimulator({ selectedInvestor, onEventSent }) {
     });
   };
 
+  // Demo Reset: Calls backend POST /events/reset
+  const handleResetDemo = async () => {
+    setIsSubmitting(true);
+    setStatusMessage(null);
+    try {
+      const res = await fetch(`${API_BASE}/events/reset`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ investorId: selectedInvestor }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || 'Failed to reset demo state');
+      }
+      setStatusMessage({ type: 'success', text: `Demo state reset for ${selectedInvestor}` });
+      if (onReset) {
+        onReset();
+      }
+    } catch (err) {
+      setStatusMessage({ type: 'error', text: err.message });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 shadow-sm backdrop-blur-sm space-y-5">
       <div>
@@ -132,11 +157,23 @@ export default function EventSimulator({ selectedInvestor, onEventSent }) {
         </p>
       </div>
 
-      {/* Demo Preset Shortcuts */}
+      {/* Demo Preset Shortcuts Header with Reset Demo Action */}
       <div>
-        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
-          One-Click Demo Scenarios
-        </span>
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+            One-Click Demo Scenarios
+          </span>
+          <button
+            type="button"
+            onClick={handleResetDemo}
+            disabled={isSubmitting}
+            className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[11px] font-medium border border-slate-700 transition disabled:opacity-50"
+            title="Reset this simulated investor back to clean state"
+          >
+            <RotateCcw className="w-3 h-3 text-indigo-400" />
+            <span>Reset Demo</span>
+          </button>
+        </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <button
             type="button"
