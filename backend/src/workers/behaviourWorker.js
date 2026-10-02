@@ -1,5 +1,7 @@
 const { createRedisClient } = require('../config/redis');
 const { INVESTOR_EVENTS_STREAM } = require('../services/streamService');
+const { updateInvestorState } = require('../services/investorState');
+const { evaluateBehaviour } = require('../services/riskEngine');
 
 // Configurable Consumer Group & Worker Name
 const CONSUMER_GROUP = process.env.REDIS_CONSUMER_GROUP || 'behaviour-workers';
@@ -63,6 +65,7 @@ const parseStreamEntry = (streamId, rawFields) => {
     investorId: fields.investorId,
     eventType: fields.eventType,
     amount,
+    outcome: fields.outcome || null,
     timestamp: fields.timestamp,
     ...(metadata ? { metadata } : {}),
   };
@@ -70,24 +73,40 @@ const parseStreamEntry = (streamId, rawFields) => {
 
 /**
  * Processes a parsed investor behavioural event.
- * Currently demonstrates successful event delivery.
- * In the next stage, this is where the Explainable Risk Engine will be evaluated.
+ * Updates investor state and evaluates explainable behavioural risk rules.
  *
  * @param {Object} event - The parsed investor event
+ * @returns {Promise<Object>} The evaluated behavioural assessment
  */
 const processEvent = async (event) => {
-  console.log('[WORKER] Event received');
-  console.log(`[WORKER] Stream ID: ${event.streamId}`);
-  console.log(`[WORKER] Investor: ${event.investorId}`);
-  console.log(`[WORKER] Type: ${event.eventType}`);
-  if (event.amount !== null && event.amount !== undefined) {
-    console.log(`[WORKER] Amount: ${event.amount}`);
-  }
+  // 1. Update in-memory bounded behavioural state
+  const investorState = updateInvestorState(event.investorId, event);
 
-  // =========================================================================
-  // ARCHITECTURAL HOOK FOR NEXT PROMPT:
-  // const riskEvaluation = await riskEngine.evaluate(event);
-  // =========================================================================
+  // 2. Evaluate behavioural patterns deterministically
+  const assessment = evaluateBehaviour(event, investorState);
+
+  // 3. Clear console output for hackathon demonstration
+  console.log('----------------------------------------------------');
+  console.log(`[WORKER] Assessment for: ${assessment.investorId}`);
+  console.log(`[WORKER] Stream ID: ${event.streamId || 'N/A'}`);
+  console.log(`[WORKER] Event Type: ${event.eventType}${event.amount ? ` (₹${event.amount})` : ''}${event.outcome ? ` [Outcome: ${event.outcome}]` : ''}`);
+  console.log(`[WORKER] Risk Score: ${assessment.riskScore}/100`);
+  console.log(`[WORKER] Risk Level: ${assessment.riskLevel}`);
+  if (assessment.signals.length === 0) {
+    console.log('[WORKER] Signals: None');
+  } else {
+    console.log('[WORKER] Signals:');
+    assessment.signals.forEach((sig) => {
+      console.log(`  - [${sig.severity}] ${sig.type}: ${sig.message}`);
+    });
+  }
+  console.log(`[WORKER] Cooling-Off: ${assessment.coolingOff ? 'YES' : 'NO'}`);
+  if (assessment.coolingOff) {
+    console.log(`[WORKER] Cooling-Off Reason: ${assessment.coolingOffReason}`);
+  }
+  console.log('----------------------------------------------------');
+
+  return assessment;
 };
 
 /**

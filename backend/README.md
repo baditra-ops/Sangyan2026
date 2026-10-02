@@ -2,41 +2,101 @@
 
 Backend service for the **SANGYAN Investor Resilience Hackathon prototype**.
 
-> **Note**: This application is a behavioural safety prototype. It uses **synthetic / simulated investor events only**. It does NOT access real bank accounts, brokerage accounts, SMS, or OTPs, nor does it provide financial or trading advice.
+> **IMPORTANT SAFETY NOTICE**:
+> This system is a **behavioural safety prototype**. It evaluates simulated behavioural patterns to encourage investor reflection and resilience.
+> - **NOT a trading platform**: Does NOT provide stock tips, price predictions, buy/sell/hold recommendations, or broker promotion.
+> - **NOT financial advice**: Does NOT claim to judge if an investment is financially good or bad.
+> - **Synthetic data only**: Does NOT access real bank accounts, brokerages, OTPs, or SMS.
+> - **Prototype heuristics**: Thresholds are demo scoring rules for hackathon illustration and are **NOT official SEBI thresholds**.
 
 ---
 
 ## Architecture Flow
 
 ```text
-HTTP Request (Simulated Event)
+HTTP POST /events (Synthetic Decision Event)
       │
-      ▼
-POST /events (Express)
-      │
-      ▼ Validation
-      │
+      ▼ Validation (investorId, eventType, amount, outcome)
 streamService.js (XADD)
       │
       ▼
 Redis Stream (`investor-events`)
       │
       ▼ XREADGROUP (Consumer Group: `behaviour-workers`)
-      │
 behaviourWorker.js
       │
-      ▼ processEvent(event)
+      ▼ updateInvestorState(investorId, event)
+investorState.js (In-memory bounded history, max 20 events)
       │
-   [Future Risk Engine]
+      ▼ evaluateBehaviour(event, investorState)
+riskEngine.js (Explainable, deterministic rules & scoring)
       │
-      ▼ XACK (Message Acknowledgement)
+      ├───────────────────────┬──────────────────────┐
+      ▼                       ▼                      ▼
+  Risk Score (0–100)      Risk Level          Behavioural Signals
+      │                       │                      │
+      └───────────────────────┴──────────────────────┘
+                              │
+                              ▼
+                     Cooling-Off Trigger?
+                      [ YES / NO + Reason ]
+                              │
+                              ▼
+                XACK (Message Acknowledgement)
 ```
+
+---
+
+## Behavioural Signals & Prototype Rules
+
+| Signal | Prototype Threshold | Severity | Points | Rationale |
+| :--- | :--- | :--- | :--- | :--- |
+| **`RAPID_DECISIONS`** | $\ge$ 3 decisions within 10 minutes | MEDIUM / HIGH | +20 | Highlights high-frequency decision making in a compressed window. |
+| **`CONSECUTIVE_LOSSES`** | $\ge$ 3 consecutive simulated losses | HIGH | +30 | Identifies negative outcome streaks that can provoke emotional bias. |
+| **`INCREASING_AMOUNT_AFTER_LOSS`** | Escalating amount following $\ge$ 2 simulated losses | HIGH | +30 | Flags potential loss-chasing / Martingale-style decision patterns. |
+| **`ODD_HOUR_ACTIVITY`** | Event timestamp between 00:00 and 05:00 IST | LOW | +10 | Highlights activity during unusual overnight hours when cognitive fatigue is higher. |
+
+---
+
+## Deterministic Scoring & Risk Levels
+
+Total risk score is calculated as the sum of triggered signal points, capped at 100:
+
+$$\text{Risk Score} = \min(100, \sum \text{Signal Points})$$
+
+| Score Range | Risk Level |
+| :--- | :--- |
+| **0 – 29** | `LOW` |
+| **30 – 59** | `MODERATE` |
+| **60 – 79** | `HIGH` |
+| **80 – 100** | `CRITICAL` |
+
+### Cooling-Off Intervention Rule
+A **Cooling-Off** recommendation (`coolingOff = true`) is triggered when:
+- **`riskScore >= 60`** (HIGH or CRITICAL), OR
+- **Multiple HIGH severity signals** are triggered together.
+
+*Note: Cooling-off encourages a pause to reflect; it does not freeze accounts or cancel transactions.*
 
 ---
 
 ## API Endpoints
 
-### 1. Health Check
+### 1. Ingest Event
+- **Method**: `POST`
+- **Path**: `/events`
+- **Body**:
+  ```json
+  {
+    "investorId": "investor-001",
+    "eventType": "INVESTMENT_DECISION",
+    "amount": 5000,
+    "outcome": "LOSS",
+    "timestamp": "2026-10-02T12:30:00.000Z"
+  }
+  ```
+
+### 2. Health Check
 - **Method**: `GET`
 - **Path**: `/health`
 - **Response**:
@@ -44,73 +104,6 @@ behaviourWorker.js
   {
     "status": "ok",
     "service": "pause-backend",
-    "redis": "ready",
-    "timestamp": "2026-10-02T12:34:17.998Z",
-    "uptime": 148.97
+    "redis": "ready"
   }
-  ```
-
----
-
-### 2. Ingest Investor Event
-- **Method**: `POST`
-- **Path**: `/events`
-- **Headers**: `Content-Type: application/json`
-
-#### Example Request Body
-```json
-{
-  "investorId": "investor-001",
-  "eventType": "INVESTMENT_DECISION",
-  "amount": 5000,
-  "timestamp": "2026-10-02T12:30:00.000Z"
-}
-```
-
-*Note: If `timestamp` or `eventId` are omitted, they are automatically generated.*
-
-#### Example Success Response (`201 Created`)
-```json
-{
-  "success": true,
-  "message": "Investor event accepted",
-  "event": {
-    "id": "evt_4280a7f5-8d5a-45b2-a111-6d2b04afe2fc",
-    "investorId": "investor-001",
-    "eventType": "INVESTMENT_DECISION",
-    "amount": 5000,
-    "timestamp": "2026-10-02T12:32:04.934Z"
-  },
-  "streamId": "1790944324942-0"
-}
-```
-
-#### Validation Rules
-- `investorId`: Required non-empty string.
-- `eventType`: Required non-empty string.
-- `amount`: Required positive number (`> 0`) when `eventType` is `INVESTMENT_DECISION` or when `amount` is specified.
-
----
-
-## Behaviour Worker & Consumer Groups
-
-- **Stream**: `investor-events`
-- **Consumer Group**: `behaviour-workers`
-- **Worker**: [backend/src/workers/behaviourWorker.js](file:///e:/Sangyan2026/backend/src/workers/behaviourWorker.js)
-- **Reading Command**: `XREADGROUP GROUP behaviour-workers <consumer-name> BLOCK 2000 COUNT 10 STREAMS investor-events >`
-- **Acknowledgement**: `XACK investor-events behaviour-workers <streamId>`
-
-### Inspecting Stream & Consumer Group via Docker
-
-- Check pending messages:
-  ```bash
-  docker exec -it redis_Rick redis-cli XPENDING investor-events behaviour-workers
-  ```
-- Check consumer group status:
-  ```bash
-  docker exec -it redis_Rick redis-cli XINFO GROUPS investor-events
-  ```
-- View stream entries:
-  ```bash
-  docker exec -it redis_Rick redis-cli XRANGE investor-events - +
   ```

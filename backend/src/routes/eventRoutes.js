@@ -20,7 +20,7 @@ const generateEventId = () => {
  */
 router.post('/', async (req, res) => {
   try {
-    const { investorId, eventType, amount, timestamp, metadata } = req.body || {};
+    const { investorId, eventType, amount, outcome, timestamp, metadata } = req.body || {};
 
     // 1. Validate investorId
     if (!investorId || typeof investorId !== 'string' || !investorId.trim()) {
@@ -52,27 +52,41 @@ router.post('/', async (req, res) => {
       }
     }
 
-    // 4. Normalize timestamp
+    // 4. Validate optional simulated outcome (WIN, LOSS, NEUTRAL)
+    let normalizedOutcome = null;
+    if (outcome !== undefined && outcome !== null) {
+      if (typeof outcome !== 'string' || !['WIN', 'LOSS', 'NEUTRAL'].includes(outcome.trim().toUpperCase())) {
+        return res.status(400).json({
+          success: false,
+          error: 'Validation Error',
+          message: 'outcome must be one of: WIN, LOSS, NEUTRAL',
+        });
+      }
+      normalizedOutcome = outcome.trim().toUpperCase();
+    }
+
+    // 5. Normalize timestamp
     let eventTimestamp = timestamp;
     if (!eventTimestamp || typeof eventTimestamp !== 'string' || isNaN(Date.parse(eventTimestamp))) {
       eventTimestamp = new Date().toISOString();
     }
 
-    // 5. Build structured synthetic event
+    // 6. Build structured synthetic event
     const eventId = req.body.eventId || req.body.id || generateEventId();
     const event = {
       eventId,
       investorId: investorId.trim(),
       eventType: eventType.trim(),
       amount: typeof amount === 'number' ? amount : null,
+      outcome: normalizedOutcome,
       timestamp: eventTimestamp,
       ...(metadata ? { metadata } : {}),
     };
 
-    // 6. Append to Redis Stream
+    // 7. Append to Redis Stream
     const streamId = await addInvestorEvent(event);
 
-    // 7. Return accepted response
+    // 8. Return accepted response
     return res.status(201).json({
       success: true,
       message: 'Investor event accepted',
@@ -81,6 +95,7 @@ router.post('/', async (req, res) => {
         investorId: event.investorId,
         eventType: event.eventType,
         amount: event.amount,
+        outcome: event.outcome,
         timestamp: event.timestamp,
         ...(event.metadata ? { metadata: event.metadata } : {}),
       },

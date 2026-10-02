@@ -25,6 +25,10 @@ const addInvestorEvent = async (event) => {
     'timestamp', String(event.timestamp || new Date().toISOString()),
   ];
 
+  if (event.outcome) {
+    fields.push('outcome', String(event.outcome));
+  }
+
   if (event.metadata !== undefined && event.metadata !== null) {
     const metadataStr = typeof event.metadata === 'object'
       ? JSON.stringify(event.metadata)
