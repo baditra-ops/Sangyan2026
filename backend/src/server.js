@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const { redisClient } = require('./config/redis');
 const eventRoutes = require('./routes/eventRoutes');
+const { startWorker, stopWorker } = require('./workers/behaviourWorker');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -81,11 +82,24 @@ const server = app.listen(PORT, () => {
   redisClient.connect().catch((err) => {
     console.warn('[Redis] Connection notice:', err.message);
   });
+
+  // Start Behaviour Worker for investor event stream
+  startWorker().catch((err) => {
+    console.error('[Worker Startup Error]', err.message);
+  });
 });
 
 // Graceful Shutdown
 const handleShutdown = async (signal) => {
   console.log(`\n[${signal}] Initiating graceful shutdown...`);
+
+  // Stop Behaviour Worker
+  try {
+    await stopWorker();
+  } catch (workerErr) {
+    console.warn('[Worker] Error stopping worker:', workerErr.message);
+  }
+
   server.close(() => {
     console.log('[HTTP] Server closed.');
   });

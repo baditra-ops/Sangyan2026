@@ -20,6 +20,16 @@ streamService.js (XADD)
       │
       ▼
 Redis Stream (`investor-events`)
+      │
+      ▼ XREADGROUP (Consumer Group: `behaviour-workers`)
+      │
+behaviourWorker.js
+      │
+      ▼ processEvent(event)
+      │
+   [Future Risk Engine]
+      │
+      ▼ XACK (Message Acknowledgement)
 ```
 
 ---
@@ -82,16 +92,25 @@ Redis Stream (`investor-events`)
 
 ---
 
-## Redis Stream: `investor-events`
+## Behaviour Worker & Consumer Groups
 
-Events are stored as key-value pairs using Redis `XADD`:
-- `eventId`: Unique identifier of the synthetic event
-- `investorId`: Simulated investor ID
-- `eventType`: Event category (e.g., `INVESTMENT_DECISION`)
-- `amount`: Decision amount
-- `timestamp`: ISO-8601 timestamp
+- **Stream**: `investor-events`
+- **Consumer Group**: `behaviour-workers`
+- **Worker**: [backend/src/workers/behaviourWorker.js](file:///e:/Sangyan2026/backend/src/workers/behaviourWorker.js)
+- **Reading Command**: `XREADGROUP GROUP behaviour-workers <consumer-name> BLOCK 2000 COUNT 10 STREAMS investor-events >`
+- **Acknowledgement**: `XACK investor-events behaviour-workers <streamId>`
 
-To inspect the stream directly via Docker:
-```bash
-docker exec -it redis_Rick redis-cli XRANGE investor-events - +
-```
+### Inspecting Stream & Consumer Group via Docker
+
+- Check pending messages:
+  ```bash
+  docker exec -it redis_Rick redis-cli XPENDING investor-events behaviour-workers
+  ```
+- Check consumer group status:
+  ```bash
+  docker exec -it redis_Rick redis-cli XINFO GROUPS investor-events
+  ```
+- View stream entries:
+  ```bash
+  docker exec -it redis_Rick redis-cli XRANGE investor-events - +
+  ```
