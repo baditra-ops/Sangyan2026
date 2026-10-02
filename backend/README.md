@@ -41,9 +41,89 @@ riskEngine.js (Explainable, deterministic rules & scoring)
                      Cooling-Off Trigger?
                       [ YES / NO + Reason ]
                               │
-                              ▼
-                XACK (Message Acknowledgement)
+                              ├──────────────────────────────────────┐
+                              ▼                                      ▼
+                        XACK (Redis)                        websocketService.js
+                                                                     │
+                                                                     ▼
+                                                          Targeted Client Broadcast
+                                                              (ws://host:port/ws)
 ```
+
+---
+
+## Real-Time WebSocket Protocol
+
+- **Endpoint**: `ws://localhost:5000/ws`
+
+### 1. Client Registration
+A connected frontend/client registers to receive real-time assessments for a specific simulated investor.
+
+**Option A: Registration via JSON message**:
+```json
+{
+  "type": "REGISTER",
+  "investorId": "investor-001"
+}
+```
+
+**Option B: Registration via URL query param**:
+```text
+ws://localhost:5000/ws?investorId=investor-001
+```
+
+**Server Acknowledgement**:
+```json
+{
+  "type": "REGISTERED",
+  "investorId": "investor-001"
+}
+```
+
+### 2. Real-Time Behaviour Assessment Message
+Broadcast in real-time when the Behaviour Worker evaluates an incoming event for that investor:
+```json
+{
+  "type": "BEHAVIOUR_ASSESSMENT",
+  "data": {
+    "investorId": "investor-001",
+    "eventId": "evt_4280a7f5-8d5a-45b2-a111-6d2b04afe2fc",
+    "streamId": "1790945165877-0",
+    "riskScore": 80,
+    "riskLevel": "CRITICAL",
+    "signals": [
+      {
+        "type": "RAPID_DECISIONS",
+        "severity": "MEDIUM",
+        "message": "3 investment decisions occurred within the last 10 minutes."
+      },
+      {
+        "type": "CONSECUTIVE_LOSSES",
+        "severity": "HIGH",
+        "message": "3 simulated loss outcomes occurred consecutively."
+      },
+      {
+        "type": "INCREASING_AMOUNT_AFTER_LOSS",
+        "severity": "HIGH",
+        "message": "Investment amount increased following simulated losses (possible loss-chasing pattern detected)."
+      }
+    ],
+    "coolingOff": true,
+    "coolingOffReason": "Cooling-off recommended: Rapid repeated decisions, 3 consecutive simulated losses, Increasing investment amount after losses. Encouraging a moment to pause and reflect.",
+    "reasons": [
+      "Rapid repeated decisions",
+      "3 consecutive simulated losses",
+      "Increasing investment amount after losses"
+    ],
+    "timestamp": "2026-10-02T13:31:33.133Z",
+    "disclaimer": "Prototype heuristics for behavioural resilience demonstration only. Not SEBI thresholds or financial advice."
+  }
+}
+```
+
+### 3. Investor-Specific Routing
+- The server maintains isolated client sets per `investorId`.
+- Clients registered for `investor-001` **never** receive assessments intended for `investor-002`.
 
 ---
 
@@ -60,8 +140,6 @@ riskEngine.js (Explainable, deterministic rules & scoring)
 
 ## Deterministic Scoring & Risk Levels
 
-Total risk score is calculated as the sum of triggered signal points, capped at 100:
-
 $$\text{Risk Score} = \min(100, \sum \text{Signal Points})$$
 
 | Score Range | Risk Level |
@@ -75,8 +153,6 @@ $$\text{Risk Score} = \min(100, \sum \text{Signal Points})$$
 A **Cooling-Off** recommendation (`coolingOff = true`) is triggered when:
 - **`riskScore >= 60`** (HIGH or CRITICAL), OR
 - **Multiple HIGH severity signals** are triggered together.
-
-*Note: Cooling-off encourages a pause to reflect; it does not freeze accounts or cancel transactions.*
 
 ---
 
@@ -104,6 +180,8 @@ A **Cooling-Off** recommendation (`coolingOff = true`) is triggered when:
   {
     "status": "ok",
     "service": "pause-backend",
-    "redis": "ready"
+    "redis": "ready",
+    "websocket": "ready",
+    "connectedClients": 0
   }
   ```

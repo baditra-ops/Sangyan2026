@@ -2,6 +2,7 @@ const { createRedisClient } = require('../config/redis');
 const { INVESTOR_EVENTS_STREAM } = require('../services/streamService');
 const { updateInvestorState } = require('../services/investorState');
 const { evaluateBehaviour } = require('../services/riskEngine');
+const { broadcastAssessment } = require('../services/websocketService');
 
 // Configurable Consumer Group & Worker Name
 const CONSUMER_GROUP = process.env.REDIS_CONSUMER_GROUP || 'behaviour-workers';
@@ -85,7 +86,14 @@ const processEvent = async (event) => {
   // 2. Evaluate behavioural patterns deterministically
   const assessment = evaluateBehaviour(event, investorState);
 
-  // 3. Clear console output for hackathon demonstration
+  // 3. Broadcast real-time assessment to registered WebSocket clients
+  try {
+    broadcastAssessment(assessment);
+  } catch (wsErr) {
+    console.warn('[WORKER] WebSocket broadcast notice:', wsErr.message);
+  }
+
+  // 4. Clear console output for hackathon demonstration
   console.log('----------------------------------------------------');
   console.log(`[WORKER] Assessment for: ${assessment.investorId}`);
   console.log(`[WORKER] Stream ID: ${event.streamId || 'N/A'}`);

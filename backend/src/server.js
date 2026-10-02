@@ -1,9 +1,11 @@
 require('dotenv').config();
+const http = require('http');
 const express = require('express');
 const cors = require('cors');
 const { redisClient } = require('./config/redis');
 const eventRoutes = require('./routes/eventRoutes');
 const { startWorker, stopWorker } = require('./workers/behaviourWorker');
+const { initWebSocketServer, getWebSocketStatus, closeWebSocketServer } = require('./services/websocketService');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -41,10 +43,13 @@ app.get('/', (req, res) => {
 
 // Health Check Endpoint (Required by prompt)
 app.get('/health', (req, res) => {
+  const wsStatus = getWebSocketStatus();
   res.status(200).json({
     status: 'ok',
     service: 'pause-backend',
     redis: redisClient.status,
+    websocket: wsStatus.status,
+    connectedClients: wsStatus.connectedClients,
     timestamp: new Date().toISOString(),
     uptime: Number(process.uptime().toFixed(2)),
   });
@@ -70,11 +75,18 @@ app.use((err, req, res, next) => {
   });
 });
 
+// Create Shared HTTP Server for Express and WebSockets
+const server = http.createServer(app);
+
+// Initialize WebSocket Service on /ws
+initWebSocketServer(server);
+
 // Start HTTP Server
-const server = app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log('====================================================');
   console.log(`🚀 PAUSE Backend running on http://localhost:${PORT}`);
   console.log(`📡 Health Check: http://localhost:${PORT}/health`);
+  console.log(`⚡ WebSocket Server: ws://localhost:${PORT}/ws`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log('====================================================');
 
@@ -98,6 +110,13 @@ const handleShutdown = async (signal) => {
     await stopWorker();
   } catch (workerErr) {
     console.warn('[Worker] Error stopping worker:', workerErr.message);
+  }
+
+  // Close WebSocket Server
+  try {
+    await closeWebSocketServer();
+  } catch (wsErr) {
+    console.warn('[WS] Error closing WebSocket server:', wsErr.message);
   }
 
   server.close(() => {
