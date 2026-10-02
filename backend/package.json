@@ -1,0 +1,31 @@
+{
+  "name": "pause-backend",
+  "version": "1.0.0",
+  "description": "PAUSE - Real-Time Investor Behavioural Safety System (Backend)",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "test": "echo \"No test specified yet\" && exit 0"
+  },
+  "keywords": [
+    "sangyan",
+    "investor-resilience",
+    "behavioural-safety",
+    "redis-streams",
+    "websockets"
+  ],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.5",
+    "express": "^5.2.1",
+    "ioredis": "^6.0.0",
+    "ws": "^8.22.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
