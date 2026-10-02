@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { redisClient } = require('./config/redis');
+const eventRoutes = require('./routes/eventRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -47,6 +48,9 @@ app.get('/health', (req, res) => {
     uptime: Number(process.uptime().toFixed(2)),
   });
 });
+
+// Event Ingestion Routes
+app.use('/events', eventRoutes);
 
 // 404 Handler
 app.use((req, res) => {
