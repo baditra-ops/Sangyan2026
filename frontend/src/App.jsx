@@ -15,6 +15,7 @@ import DecisionJournal from './components/DecisionJournal';
 import SystemFlowVisualization from './components/SystemFlowVisualization';
 import ExplainabilityPanel from './components/ExplainabilityPanel';
 import Footer from './components/Footer';
+import MagneticCursor from './components/MagneticCursor';
 import { useWebSocket } from './hooks/useWebSocket';
 
 export default function App() {
@@ -293,6 +294,9 @@ export default function App() {
         language={language}
         onToggleLanguage={setLanguage}
       />
+
+      {/* 11. Custom Magnetic Cursor */}
+      <MagneticCursor />
     </div>
   );
 }
