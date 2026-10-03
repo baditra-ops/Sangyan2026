@@ -46,6 +46,12 @@ export function useWebSocket(investorId) {
     const ws = new WebSocket(wsUrl);
     socketRef.current = ws;
 
+    const heartbeatInterval = setInterval(() => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'PING' }));
+      }
+    }, 20000);
+
     ws.onopen = () => {
       setConnectionStatus('CONNECTED');
       // Also send explicit registration message for protocol compliance
@@ -56,6 +62,11 @@ export function useWebSocket(investorId) {
       try {
         const message = JSON.parse(event.data);
         setLastMessageTime(new Date());
+
+        // Ignore heartbeat replies
+        if (message.type === 'PONG' || message.type === 'PING') {
+          return;
+        }
 
         if (message.type === 'REGISTERED') {
           setIsRegistered(true);
@@ -78,15 +89,16 @@ export function useWebSocket(investorId) {
     };
 
     ws.onclose = () => {
+      clearInterval(heartbeatInterval);
       setConnectionStatus('DISCONNECTED');
       setIsRegistered(false);
 
       if (shouldReconnectRef.current) {
-        // Reconnect after 3 seconds with sensible backoff
+        // Reconnect after 2 seconds with sensible backoff
         clearTimeout(reconnectTimeoutRef.current);
         reconnectTimeoutRef.current = setTimeout(() => {
           connect();
-        }, 3000);
+        }, 2000);
       }
     };
   }, [investorId]);

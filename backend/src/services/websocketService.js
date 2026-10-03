@@ -85,6 +85,22 @@ const initWebSocketServer = (httpServer) => {
 
   console.log('[WS] WebSocket server initialized on path /ws');
 
+  // Ping connected clients every 25 seconds to keep connections alive through cloud reverse proxies
+  const heartbeatInterval = setInterval(() => {
+    if (!wss) return;
+    wss.clients.forEach((ws) => {
+      if (ws.isAlive === false) {
+        return ws.terminate();
+      }
+      ws.isAlive = false;
+      ws.ping();
+    });
+  }, 25000);
+
+  wss.on('close', () => {
+    clearInterval(heartbeatInterval);
+  });
+
   wss.on('connection', (ws, req) => {
     console.log('[WS] Client connected');
 
@@ -99,10 +115,29 @@ const initWebSocketServer = (httpServer) => {
       // Ignore query parse error
     }
 
+    ws.isAlive = true;
+    ws.on('pong', () => {
+      ws.isAlive = true;
+    });
+
     // Handle incoming client messages
     ws.on('message', (rawData) => {
       try {
         const message = JSON.parse(rawData.toString());
+
+        // Heartbeat keep-alive
+        if (message.type === 'PING') {
+          ws.isAlive = true;
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'PONG' }));
+          }
+          return;
+        }
+
+        if (message.type === 'PONG') {
+          ws.isAlive = true;
+          return;
+        }
 
         if (message.type === 'REGISTER') {
           if (!message.investorId || typeof message.investorId !== 'string' || !message.investorId.trim()) {
