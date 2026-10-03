@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Play, Zap, Flame, Clock, ShieldAlert, Check, Loader2, Sparkles, RotateCcw } from 'lucide-react';
+import { Play, Zap, Flame, Clock, Check, Loader2, Sparkles, RotateCcw } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -28,7 +28,12 @@ export default function EventSimulator({ selectedInvestor, onEventSent, onReset,
       const data = await res.json();
       setStatusMessage({ type: 'success', text: `Event ingested! Stream ID: ${data.streamId}` });
       if (onEventSent) {
-        onEventSent(data.event);
+        onEventSent({
+          ...data.event,
+          eventId: data.event.id,
+          streamId: data.streamId,
+          receivedAt: new Date().toISOString(),
+        });
       }
     } catch (err) {
       setStatusMessage({ type: 'error', text: err.message });
@@ -144,12 +149,12 @@ export default function EventSimulator({ selectedInvestor, onEventSent, onReset,
   };
 
   return (
-    <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 shadow-sm backdrop-blur-sm space-y-4">
+    <div className="bg-slate-900/70 border border-slate-800 rounded-xl p-5 shadow-sm backdrop-blur-sm space-y-4">
       <div>
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <Sparkles className="w-4 h-4 text-indigo-400" />
-            <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+            <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider font-mono">
               {language === 'hi' ? 'कृत्रिम घटना सिमुलेटर' : 'SYNTHETIC EVENT SIMULATOR'}
             </h3>
           </div>
@@ -157,7 +162,7 @@ export default function EventSimulator({ selectedInvestor, onEventSent, onReset,
             SIMULATED DATA
           </span>
         </div>
-        <p className="text-[11px] text-slate-500 mt-0.5">
+        <p className="text-[11px] text-slate-400 mt-0.5">
           {language === 'hi'
             ? 'रीयल-टाइम रेडिस स्ट्रीम पाइपलाइन का परीक्षण करने के लिए सिंथेटिक निर्णय भेजें।'
             : 'Simulate retail investor decision events to feed the real-time Redis Stream pipeline.'}
@@ -167,14 +172,14 @@ export default function EventSimulator({ selectedInvestor, onEventSent, onReset,
       {/* Demo Preset Shortcuts Header with Reset Demo Action */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+          <span className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider block">
             {language === 'hi' ? 'एक-क्लिक डेमो परिदृश्य' : 'One-Click Demo Presets'}
           </span>
           <button
             type="button"
             onClick={handleResetDemo}
             disabled={isSubmitting}
-            className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[11px] font-medium border border-slate-700 transition disabled:opacity-50"
+            className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[11px] font-medium border border-slate-700 transition disabled:opacity-50 active:scale-95"
             title="Reset this simulated investor back to clean state"
           >
             <RotateCcw className="w-3 h-3 text-indigo-400" />
@@ -188,7 +193,7 @@ export default function EventSimulator({ selectedInvestor, onEventSent, onReset,
             type="button"
             onClick={runNormalDemo}
             disabled={isSubmitting}
-            className="p-2.5 rounded-lg bg-slate-950 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-slate-700 text-left transition flex flex-col justify-between disabled:opacity-50"
+            className="p-3 rounded-lg bg-slate-950/80 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-emerald-500/40 text-left transition flex flex-col justify-between disabled:opacity-50 group"
           >
             <div className="flex items-center space-x-1.5 text-emerald-400 mb-1">
               <Check className="w-3.5 h-3.5" />
@@ -204,14 +209,14 @@ export default function EventSimulator({ selectedInvestor, onEventSent, onReset,
             type="button"
             onClick={runRapidDemo}
             disabled={isSubmitting}
-            className="p-2.5 rounded-lg bg-slate-950 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-slate-700 text-left transition flex flex-col justify-between disabled:opacity-50"
+            className="p-3 rounded-lg bg-slate-950/80 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-amber-500/40 text-left transition flex flex-col justify-between disabled:opacity-50 group"
           >
             <div className="flex items-center space-x-1.5 text-amber-400 mb-1">
               <Zap className="w-3.5 h-3.5" />
               <span className="text-xs font-bold font-mono">RAPID DECISIONS</span>
             </div>
             <span className="text-[10px] text-slate-400 leading-tight">
-              {language === 'hi' ? 'कम अंतराल में दोहराए गए निर्णय' : 'Demonstrates repeated decisions in a short interval'}
+              {language === 'hi' ? 'कम अंतराल में दोहराए गए निर्णय' : 'Repeated decisions in a short interval'}
             </span>
           </button>
 
@@ -220,14 +225,14 @@ export default function EventSimulator({ selectedInvestor, onEventSent, onReset,
             type="button"
             onClick={runLossChasingDemo}
             disabled={isSubmitting}
-            className="p-2.5 rounded-lg bg-slate-950 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-slate-700 text-left transition flex flex-col justify-between disabled:opacity-50"
+            className="p-3 rounded-lg bg-slate-950/80 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-rose-500/40 text-left transition flex flex-col justify-between disabled:opacity-50 group"
           >
             <div className="flex items-center space-x-1.5 text-rose-400 mb-1">
               <Flame className="w-3.5 h-3.5" />
               <span className="text-xs font-bold font-mono">LOSS CHASING</span>
             </div>
             <span className="text-[10px] text-slate-400 leading-tight">
-              {language === 'hi' ? 'लगातार नुकसान + बढ़ती राशि' : 'Demonstrates consecutive losses + increasing amount behaviour'}
+              {language === 'hi' ? 'लगातार नुकसान + बढ़ती राशि' : 'Consecutive losses + increasing amount behaviour'}
             </span>
           </button>
 
@@ -236,14 +241,14 @@ export default function EventSimulator({ selectedInvestor, onEventSent, onReset,
             type="button"
             onClick={runOddHourDemo}
             disabled={isSubmitting}
-            className="p-2.5 rounded-lg bg-slate-950 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-slate-700 text-left transition flex flex-col justify-between disabled:opacity-50"
+            className="p-3 rounded-lg bg-slate-950/80 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-indigo-500/40 text-left transition flex flex-col justify-between disabled:opacity-50 group"
           >
             <div className="flex items-center space-x-1.5 text-indigo-400 mb-1">
               <Clock className="w-3.5 h-3.5" />
               <span className="text-xs font-bold font-mono">ODD HOURS</span>
             </div>
             <span className="text-[10px] text-slate-400 leading-tight">
-              {language === 'hi' ? 'देर रात गतिविधि का पता लगाना' : 'Demonstrates late-night activity detection'}
+              {language === 'hi' ? 'देर रात गतिविधि का पता लगाना' : 'Late-night activity detection'}
             </span>
           </button>
         </div>
@@ -254,7 +259,7 @@ export default function EventSimulator({ selectedInvestor, onEventSent, onReset,
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {/* Amount input */}
           <div>
-            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">
+            <label className="text-[10px] font-mono font-semibold text-slate-400 uppercase tracking-wider block mb-1">
               {language === 'hi' ? 'सिम्युलेटेड राशि (₹)' : 'Simulated Amount (₹)'}
             </label>
             <input
@@ -265,19 +270,19 @@ export default function EventSimulator({ selectedInvestor, onEventSent, onReset,
               min="1"
               step="100"
               required
-              className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500 font-mono"
+              className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500 font-mono"
             />
           </div>
 
           {/* Simulated Outcome */}
           <div>
-            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">
+            <label className="text-[10px] font-mono font-semibold text-slate-400 uppercase tracking-wider block mb-1">
               {language === 'hi' ? 'सिम्युलेटेड परिणाम' : 'Simulated Outcome'}
             </label>
             <select
               value={outcome}
               onChange={(e) => setOutcome(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500 font-mono"
+              className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-indigo-500 font-mono"
             >
               <option value="LOSS">LOSS</option>
               <option value="WIN">WIN</option>
@@ -287,15 +292,15 @@ export default function EventSimulator({ selectedInvestor, onEventSent, onReset,
 
           {/* Odd hour toggle */}
           <div className="flex items-end">
-            <label className="flex items-center space-x-2 text-xs text-slate-300 cursor-pointer p-1.5 bg-slate-950 rounded-lg border border-slate-800 w-full">
+            <label className="flex items-center space-x-2 text-xs text-slate-300 cursor-pointer p-2 bg-slate-950 rounded-lg border border-slate-800 w-full min-h-[38px]">
               <input
                 type="checkbox"
                 checked={isOddHour}
                 onChange={(e) => setIsOddHour(e.target.checked)}
                 className="rounded border-slate-700 text-indigo-600 focus:ring-0"
               />
-              <span className="text-[11px]">
-                {language === 'hi' ? 'देर रात (02:30 IST) सिमुलेट करें' : 'Simulate Odd-Hour (02:30 IST)'}
+              <span className="text-[11px] font-mono">
+                {language === 'hi' ? 'देर रात (02:30 IST) सिमुलेट करें' : 'Odd-Hour (02:30 IST)'}
               </span>
             </label>
           </div>
@@ -303,14 +308,14 @@ export default function EventSimulator({ selectedInvestor, onEventSent, onReset,
 
         {/* Submit button */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
-          <span className="text-[10px] text-slate-500 italic">
-            Targeting: <strong className="text-slate-300 font-mono">{selectedInvestor}</strong> (Synthetic simulation only)
+          <span className="text-[10px] text-slate-400 font-mono">
+            Targeting: <strong className="text-indigo-300">{selectedInvestor}</strong> (Synthetic simulation)
           </span>
 
           <button
             type="submit"
             disabled={isSubmitting}
-            className="inline-flex items-center justify-center space-x-2 px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold tracking-wide shadow-md shadow-indigo-600/20 transition disabled:opacity-50"
+            className="inline-flex items-center justify-center space-x-2 px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold tracking-wide shadow-md shadow-indigo-600/20 transition disabled:opacity-50 active:scale-95 min-h-[44px]"
           >
             {isSubmitting ? (
               <>
@@ -329,7 +334,7 @@ export default function EventSimulator({ selectedInvestor, onEventSent, onReset,
         {/* Feedback message */}
         {statusMessage && (
           <div
-            className={`p-2.5 rounded-lg text-xs font-medium border ${
+            className={`p-2.5 rounded-lg text-xs font-mono border ${
               statusMessage.type === 'error'
                 ? 'bg-rose-500/10 text-rose-300 border-rose-500/30'
                 : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'

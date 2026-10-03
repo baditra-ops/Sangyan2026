@@ -26,7 +26,7 @@ export const translations = {
 
     // Section 2: Time Horizon
     timeHorizonHeading: 'WHAT IS YOUR EXPECTED TIME HORIZON?',
-    timeHorizonSubtitle: 'Consider how long you intend to hold this perspective.',
+    timeHorizonSubtitle: 'Consider how long you intend to maintain this perspective.',
     timeHorizonOptions: {
       SHORT_TERM: 'Short-term',
       MEDIUM_TERM: 'Medium-term',
