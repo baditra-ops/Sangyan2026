@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
-const DEFAULT_WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:5000/ws';
+const rawWs = import.meta.env.VITE_WS_URL || 'ws://localhost:5000/ws';
+const DEFAULT_WS_URL = rawWs.endsWith('/') ? rawWs.slice(0, -1) : rawWs;
 
 /**
  * Custom hook managing real-time WebSocket connection to PAUSE backend.

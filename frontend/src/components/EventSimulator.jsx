@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Play, Zap, Flame, Clock, Check, Loader2, Sparkles, RotateCcw } from 'lucide-react';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const rawApi = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_BASE = rawApi.endsWith('/') ? rawApi.slice(0, -1) : rawApi;
 
 export default function EventSimulator({ selectedInvestor, onEventSent, onReset, language = 'en' }) {
   const [amount, setAmount] = useState('2500');
@@ -36,7 +37,11 @@ export default function EventSimulator({ selectedInvestor, onEventSent, onReset,
         });
       }
     } catch (err) {
-      setStatusMessage({ type: 'error', text: err.message });
+      const msg =
+        err.message === 'Failed to fetch'
+          ? `Connection failed to ${API_BASE}. If backend was sleeping on Render, wait ~30s for wakeup or verify VITE_API_URL.`
+          : err.message;
+      setStatusMessage({ type: 'error', text: msg });
     } finally {
       setIsSubmitting(false);
     }

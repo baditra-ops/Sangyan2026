@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Server, Wifi, WifiOff, Database, Cpu, Radio, RefreshCw, CheckCircle2 } from 'lucide-react';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const rawApi = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_BASE = rawApi.endsWith('/') ? rawApi.slice(0, -1) : rawApi;
 
 export default function SystemStatus({ wsStatus, onReconnect, language = 'en', onHealthChange }) {
   const [backendHealth, setBackendHealth] = useState(null);
+  const [healthError, setHealthError] = useState(null);
   const [isChecking, setIsChecking] = useState(false);
 
   const checkHealth = async () => {
@@ -14,15 +16,18 @@ export default function SystemStatus({ wsStatus, onReconnect, language = 'en', o
       if (res.ok) {
         const data = await res.json();
         setBackendHealth(data);
+        setHealthError(null);
         if (onHealthChange) {
           onHealthChange(data);
         }
       } else {
         setBackendHealth(null);
+        setHealthError(`HTTP ${res.status}`);
         if (onHealthChange) onHealthChange(null);
       }
-    } catch {
+    } catch (err) {
       setBackendHealth(null);
+      setHealthError(err.message || 'Connection failed');
       if (onHealthChange) onHealthChange(null);
     } finally {
       setIsChecking(false);
@@ -38,6 +43,11 @@ export default function SystemStatus({ wsStatus, onReconnect, language = 'en', o
   const isBackendOnline = Boolean(backendHealth && backendHealth.status === 'ok');
   const isWsConnected = wsStatus === 'CONNECTED';
   const isRedisReady = Boolean(backendHealth && backendHealth.redis === 'ready');
+  const isLocalhostOnWeb =
+    typeof window !== 'undefined' &&
+    window.location.hostname !== 'localhost' &&
+    window.location.hostname !== '127.0.0.1' &&
+    API_BASE.includes('localhost');
 
   return (
     <div className="bg-slate-900/70 border border-slate-800 rounded-xl p-4 shadow-sm backdrop-blur-sm">
@@ -131,6 +141,35 @@ export default function SystemStatus({ wsStatus, onReconnect, language = 'en', o
           </div>
         </div>
       </div>
+
+      {/* Diagnostic helper when Backend or Redis is offline */}
+      {!isBackendOnline && (
+        <div className="mt-3 pt-2.5 border-t border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] font-mono">
+          <div className="flex items-center space-x-1.5 text-slate-400">
+            <span className="text-amber-400 font-bold">API Target:</span>
+            <a
+              href={`${API_BASE}/health`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-indigo-300 underline hover:text-indigo-200 truncate max-w-[260px] sm:max-w-none"
+              title="Click to test if backend is awake"
+            >
+              {API_BASE}/health
+            </a>
+            {healthError && <span className="text-rose-400 text-[10px]">({healthError})</span>}
+          </div>
+
+          {isLocalhostOnWeb ? (
+            <span className="text-amber-300 font-bold text-[10px]">
+              ⚠️ Built with localhost. Set VITE_API_URL on Vercel & redeploy!
+            </span>
+          ) : (
+            <span className="text-slate-500 text-[10px]">
+              If Render free instance was sleeping, wait ~30s for wakeup
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }
