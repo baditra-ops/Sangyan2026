@@ -16,16 +16,51 @@ const redisConfig = {
 };
 
 /**
+ * Sanitizes Redis URL if the user accidentally copied CLI prefixes (e.g. `redis-cli --tls -u ...`),
+ * wrapping quotes, or needs TLS for Upstash.
+ */
+const sanitizeRedisUrl = (rawUrl) => {
+  if (!rawUrl || typeof rawUrl !== 'string') return null;
+  let url = rawUrl.trim();
+
+  // Strip wrapping quotes
+  if ((url.startsWith('"') && url.endsWith('"')) || (url.startsWith("'") && url.endsWith("'"))) {
+    url = url.slice(1, -1).trim();
+  }
+
+  // Extract URL if full CLI string was pasted (e.g. `redis-cli --tls -u redis://...`)
+  const cliMatch = url.match(/-u\s+(rediss?:\/\/[^\s'"]+)/);
+  if (cliMatch) {
+    url = cliMatch[1];
+  } else if (url.includes('redis://') || url.includes('rediss://')) {
+    const urlMatch = url.match(/(rediss?:\/\/[^\s'"]+)/);
+    if (urlMatch) {
+      url = urlMatch[1];
+    }
+  }
+
+  // Upstash cloud endpoints enforce TLS (`rediss://`)
+  if (url.includes('upstash.io') && url.startsWith('redis://')) {
+    url = url.replace('redis://', 'rediss://');
+  }
+
+  return url;
+};
+
+/**
  * Factory function to create a new Redis client instance
  * (useful when separate pub/sub or consumer connections are needed)
  */
 const createRedisClient = (customOptions = {}) => {
   const options = { ...redisConfig, ...customOptions };
-  const client = process.env.REDIS_URL
-    ? new Redis(process.env.REDIS_URL, {
+  const cleanUrl = sanitizeRedisUrl(process.env.REDIS_URL);
+
+  const client = cleanUrl
+    ? new Redis(cleanUrl, {
         retryStrategy: redisConfig.retryStrategy,
         maxRetriesPerRequest: null,
         lazyConnect: true,
+        ...(cleanUrl.startsWith('rediss://') ? { tls: { rejectUnauthorized: false } } : {}),
         ...customOptions,
       })
     : new Redis(options);
