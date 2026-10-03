@@ -50,7 +50,7 @@ export function useWebSocket(investorId) {
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: 'PING' }));
       }
-    }, 20000);
+    }, 15000);
 
     ws.onopen = () => {
       setConnectionStatus('CONNECTED');
@@ -90,15 +90,17 @@ export function useWebSocket(investorId) {
 
     ws.onclose = () => {
       clearInterval(heartbeatInterval);
-      setConnectionStatus('DISCONNECTED');
       setIsRegistered(false);
 
       if (shouldReconnectRef.current) {
-        // Reconnect after 2 seconds with sensible backoff
+        // Transition to CONNECTING instead of flashing red DISCONNECTED
+        setConnectionStatus('CONNECTING');
         clearTimeout(reconnectTimeoutRef.current);
         reconnectTimeoutRef.current = setTimeout(() => {
           connect();
-        }, 2000);
+        }, 1500);
+      } else {
+        setConnectionStatus('DISCONNECTED');
       }
     };
   }, [investorId]);
@@ -107,8 +109,19 @@ export function useWebSocket(investorId) {
     shouldReconnectRef.current = true;
     connect();
 
+    // Reconnect immediately if browser tab was backgrounded/restored
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
+          connect();
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
       shouldReconnectRef.current = false;
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       clearTimeout(reconnectTimeoutRef.current);
       if (socketRef.current) {
         socketRef.current.close();
